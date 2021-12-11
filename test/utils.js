@@ -17,9 +17,8 @@ const createTestChannel = async (adjudicator, channelExists) => {
     const bobPrivateKey = bobKeys.private;
 
     const preFundSetupType = encodeParam('uint8', 0);
-    const channelNonce = encodeParam('uint256', 9);
+    const channelNonce = encodeParam('uint256', Math.floor(Math.random() * 100000));
     const channel = [alicePublicKey, bobPublicKey, channelNonce];
-    const channelHash = await adjudicator.methods[methodSignatures.channelHash].call(channel);
     const turnNum = encodeParam('uint256', 0);
     const aliceResolution = encodeParam('uint256', 5000000);
     const bobResolution = encodeParam('uint256', 5000000);

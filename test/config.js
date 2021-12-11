@@ -1,13 +1,13 @@
 const aliceKeys = {
-    public: "0x662Ab152Fb2eF6c45F9E68986fe1B1D2fB1f1A7a",
-    private: "0xaebf7f2e67d2a6cfcd4f132c4a7351ec2b623923debab619343eb21ac4a86c4e"
+    public: "0x4D696a5cdE6A0d98d65688682734d4F3402bcaa7",
+    private: "0x191aa14922f08ac527d88898e190c8b2576920049d93cc92c0969e595c3203be"
 };
 const bobKeys = {
-    public: "0x78C66684c128A47A453995f5b7E30104c8CC82eF",
-    private: "0xa2d122c2eb9ac578ea9d2f66088303afd7426641ece8589c0a59ee10d66bbdbc"
+    public: "0x1B07EA131acd973541C4FC377fc61d06CE45A9C8",
+    private: "0xebd10795f9993640153125461dd3d7fea967084ed3842761eb615482e39306a3"
 }
 
-const mnemonic = "gun repeat basic govern tunnel siege carpet supreme siege laundry wet become";
+const mnemonic = "flat duck nominee fragile rate breeze pizza ring pistol myth trial shift";
 
 const methodSignatures = {
     channelHash: 'hash((address,address,uint256))',

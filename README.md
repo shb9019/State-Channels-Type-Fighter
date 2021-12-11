@@ -6,10 +6,11 @@ is modelled as a force move game. Read more [here](https://magmo.com/force-move-
 
 ## Requirements
 
-1. Truffle
-1. Truffle HD Wallet Provider
-1. Ganache CLI
+1. [Truffle](https://trufflesuite.com/docs/truffle/getting-started/installation)
+1. [@truffle/hdwallet-provider](https://www.npmjs.com/package/@truffle/hdwallet-provider)
+1. [Ganache CLI](https://docs.nethereum.com/en/latest/ethereum-and-clients/ganache-cli/)
 1. Node v10.16+
+1. Peer JS Server
 
 ## Setup
 

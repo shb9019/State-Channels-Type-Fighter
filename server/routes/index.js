@@ -7,7 +7,7 @@ function sleep(ms) {
 
 const idleNodes =  [];
 
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', async (req, res) => {
   let index;
   for(index = 0; index < idleNodes.length; index++) {
     if (idleNodes[index].bob == null) {

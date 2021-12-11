@@ -9,7 +9,7 @@ function Flight(props) {
         <div className={'flight-div'}>
             <img className={'flight-img'}
                  src={self ? blueFlight : redFlight}
-                 alt={'Self'}
+                 alt={'Flight'}
                  height={50}
                  width={'auto'}
             />

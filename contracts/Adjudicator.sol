@@ -22,10 +22,6 @@ contract Adjudicator {
         CONCLUDE
     }
 
-    function returnValue() public pure returns (StateType) {
-        return StateType.POST_FUND_SETUP;
-    }
-
     // @dev Amounts bid by the players
     struct Resolution {
         uint aliceAmount;
@@ -33,8 +29,11 @@ contract Adjudicator {
     }
 
     struct Play {
+        // Total number of letters typed by the player
         uint totalLetterCount;
+        // Total number of letters typed by the opponent
         uint opponentTotalLetterCount;
+        // Total number of letters that can be typed by the player
         uint gameLetterCount;
     }
 
@@ -82,6 +81,8 @@ contract Adjudicator {
         bool isSet;
     }
 
+    // @dev List of all created channels
+    mapping(bytes32 => Channel) public channels;
     // @dev Mapping of channel Hashes to corresponding funds
     mapping(bytes32 => ChannelFund) public channelFunds;
     // @dev Mapping of channel Hashes to registered Challenges
@@ -116,7 +117,7 @@ contract Adjudicator {
     }
 
     /**
-     * @dev Initiate a new channel using signed prefund setup messages
+     * @dev Initiate a new channel using signed prefund setup messages. Called by both players
      * @param preFundSetup Move, Signed move by msg.sender for prefund setup
      * @param preFundSetupAck Signature, Signed move by opponent for prefund setup
      */
@@ -124,9 +125,9 @@ contract Adjudicator {
         require(validMove(preFundSetup, preFundSetupAck));
 
         bool aliceBegan = (
-        preFundSetup.signature.signer == preFundSetup.state.channel.alice
-        && preFundSetupAck.signature.signer == preFundSetup.state.channel.bob
-        && preFundSetup.signature.signer == msg.sender
+            preFundSetup.signature.signer == preFundSetup.state.channel.alice
+            && preFundSetupAck.signature.signer == preFundSetup.state.channel.bob
+            && preFundSetup.signature.signer == msg.sender
         );
 
         Channel memory channel = preFundSetup.state.channel;
@@ -143,14 +144,15 @@ contract Adjudicator {
                 require(channelFunds[channelHash].hasAliceFunded == false);
                 channelFunds[channelHash].hasAliceFunded = true;
                 channelFunds[channelHash].resolution.aliceAmount = msg.value;
-                channelFunds[channelHash].isFunded = true;
             } else {
                 require(channelFunds[channelHash].hasBobFunded == false);
                 channelFunds[channelHash].hasBobFunded = true;
                 channelFunds[channelHash].resolution.bobAmount = msg.value;
-                channelFunds[channelHash].isFunded = true;
             }
+            channelFunds[channelHash].isFunded = true;
         } else {
+            require(channels[channelHash].channelNonce == 0, "Channel already exists");
+            channels[channelHash] = channel;
             channelFunds[channelHash].isSet = true;
             if (aliceBegan) {
                 channelFunds[channelHash].hasAliceFunded = true;
@@ -167,7 +169,7 @@ contract Adjudicator {
     }
 
     /**
-     * @dev Check if two state in succession are valid
+     * @dev Check if state transition is valid
      * @param fromState State, First State
      * @param toState State, state immediately succeeding fromState
      */
@@ -182,30 +184,26 @@ contract Adjudicator {
         if (fromState.stateType != StateType.PRE_FUND_SETUP) {
             isValid = isValid && (toState.timestamp >= fromState.timestamp);
             isValid = isValid && (toState.opponent_timestamp == fromState.timestamp);
+        } else {
+            isValid = isValid && (toState.timestamp >= fromState.timestamp);
         }
-        // Control how early the timestamp can be set by a malicious user
-        isValid = isValid && (toState.timestamp >= (now - 60));
-        isValid = isValid && (toState.timestamp <= (now + 60));
+
         isValid = isValid && (toState.play.gameLetterCount == fromState.play.gameLetterCount);
         isValid = isValid && (toState.play.opponentTotalLetterCount == fromState.play.totalLetterCount);
-        isValid = isValid && (toState.timestamp >= fromState.timestamp);
 
         if (fromState.stateType == StateType.PRE_FUND_SETUP) {
+            isValid = isValid && (fromState.resolution.aliceAmount == toState.resolution.aliceAmount);
+            isValid = isValid && (fromState.resolution.bobAmount == toState.resolution.bobAmount);
+
             if (toState.stateType == StateType.PRE_FUND_SETUP) {
                 isValid = isValid && (fromState.turnNum == toState.turnNum);
-                isValid = isValid && (fromState.resolution.aliceAmount == toState.resolution.aliceAmount);
-                isValid = isValid && (fromState.resolution.bobAmount == toState.resolution.bobAmount);
                 isValid = isValid && (!isAlice);
             } else if (toState.stateType == StateType.POST_FUND_SETUP) {
                 isValid = isValid && (channelFunds[channelHash].isSet == true);
                 isValid = isValid && (channelFunds[channelHash].isFunded == true);
                 isValid = isValid && (fromState.turnNum == toState.turnNum);
-                isValid = isValid && (fromState.resolution.aliceAmount == toState.resolution.aliceAmount);
-                isValid = isValid && (fromState.resolution.bobAmount == toState.resolution.bobAmount);
                 isValid = isValid && (isAlice);
             } else if (toState.stateType == StateType.CONCLUDE) {
-                isValid = isValid && (fromState.resolution.aliceAmount == toState.resolution.aliceAmount);
-                isValid = isValid && (fromState.resolution.bobAmount == toState.resolution.bobAmount);
                 isValid = isValid && (isAlice);
             } else {
                 isValid = false;
@@ -219,20 +217,18 @@ contract Adjudicator {
                 isValid = isValid && (fromState.resolution.bobAmount == toState.resolution.bobAmount);
                 isValid = isValid && (!isAlice);
             } else if (toState.stateType == StateType.GAME_PROPOSE) {
-                isValid = isValid && (fromState.turnNum < toState.turnNum);
+                isValid = isValid && ((fromState.turnNum + 1) == toState.turnNum);
                 isValid = isValid && (fromState.resolution.aliceAmount == toState.resolution.aliceAmount);
                 isValid = isValid && (fromState.resolution.bobAmount == toState.resolution.bobAmount);
                 isValid = isValid && (toState.stake > 0);
                 isValid = isValid && (toState.stake <= toState.resolution.aliceAmount);
                 isValid = isValid && (toState.stake <= toState.resolution.bobAmount);
                 isValid = isValid && (toState.play.totalLetterCount > 0);
-                isValid = isValid && (toState.play.totalLetterCount < fromState.play.gameLetterCount);
-                isValid = isValid && (fromState.play.totalLetterCount < fromState.play.gameLetterCount);
-                isValid = isValid && (toState.stake <= toState.resolution.bobAmount);
-                isValid = isValid && (toState.stake <= toState.resolution.bobAmount);
+                isValid = isValid && (toState.play.totalLetterCount <= fromState.play.gameLetterCount);
+                isValid = isValid && (fromState.play.totalLetterCount <= fromState.play.gameLetterCount);
                 isValid = isValid && (isAlice);
             } else if (toState.stateType == StateType.CONCLUDE) {
-                isValid = isValid && (fromState.turnNum < toState.turnNum);
+                isValid = isValid && ((fromState.turnNum + 1) == toState.turnNum);
                 isValid = isValid && (fromState.resolution.aliceAmount == toState.resolution.aliceAmount);
                 isValid = isValid && (fromState.resolution.bobAmount == toState.resolution.bobAmount);
                 isValid = isValid && (isAlice);
@@ -241,6 +237,7 @@ contract Adjudicator {
             }
         } else if (fromState.stateType == StateType.GAME_PROPOSE) {
             // TODO: Add POST_FUND and POST_FUND_ACK
+            // GAME_ACCEPT can only be sent by Bob. GAME_PROPOSE can only be sent by Alice.
             if (toState.stateType == StateType.GAME_ACCEPT) {
                 isValid = isValid && (fromState.turnNum == toState.turnNum);
                 isValid = isValid && (fromState.stake == toState.stake);
@@ -250,21 +247,11 @@ contract Adjudicator {
                 uint256 finalAliceAmount;
                 uint256 finalBobAmount;
                 if (fromState.play.totalLetterCount > toState.play.totalLetterCount) {
-                    if (isAlice == false) {
-                        finalAliceAmount = (fromState.resolution.aliceAmount + fromState.stake);
-                        finalBobAmount = (fromState.resolution.bobAmount - fromState.stake);
-                    } else {
-                        finalAliceAmount = (fromState.resolution.aliceAmount - fromState.stake);
-                        finalBobAmount = (fromState.resolution.bobAmount + fromState.stake);
-                    }
+                    finalAliceAmount = (fromState.resolution.aliceAmount + fromState.stake);
+                    finalBobAmount = (fromState.resolution.bobAmount - fromState.stake);
                 } else if (fromState.play.totalLetterCount < toState.play.totalLetterCount) {
-                    if (isAlice == false) {
-                        finalAliceAmount = (fromState.resolution.aliceAmount - fromState.stake);
-                        finalBobAmount = (fromState.resolution.bobAmount + fromState.stake);
-                    } else {
-                        finalAliceAmount = (fromState.resolution.aliceAmount + fromState.stake);
-                        finalBobAmount = (fromState.resolution.bobAmount - fromState.stake);
-                    }
+                    finalAliceAmount = (fromState.resolution.aliceAmount - fromState.stake);
+                    finalBobAmount = (fromState.resolution.bobAmount + fromState.stake);
                 } else {
                     finalAliceAmount = fromState.resolution.aliceAmount;
                     finalBobAmount = fromState.resolution.bobAmount;
@@ -276,7 +263,7 @@ contract Adjudicator {
                 isValid = false;
             }
         } else if (fromState.stateType == StateType.GAME_ACCEPT) {
-            isValid = isValid && (fromState.turnNum < toState.turnNum);
+            isValid = isValid && ((fromState.turnNum + 1) == toState.turnNum);
             isValid = isValid && (fromState.resolution.aliceAmount == toState.resolution.aliceAmount);
             isValid = isValid && (fromState.resolution.bobAmount == toState.resolution.bobAmount);
             isValid = isValid && (toState.play.totalLetterCount > 0);
@@ -382,7 +369,7 @@ contract Adjudicator {
     }
 
     /**
-     * @dev Return funds in case opponent does not submit funds but signs preFund setup
+     * @dev Return funds in case of an uncooperative game that ended with a force move
      * @param channelHash bytes32, Channel whose challenge is to be redeemed
      */
     function redeemResolution(bytes32 channelHash) public {
