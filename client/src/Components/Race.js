@@ -1,68 +1,22 @@
 import React, {useState, useEffect} from 'react';
-import Peer from 'peerjs';
 import {Container, Row} from "react-bootstrap";
 import Flight from "./Flight";
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+import SenderConnection from '../webrtc/SenderConnection';
+import ReceiverConnection from '../webrtc/ReceiverConnection';
 
 function Race(props) {
     const {alice, bob, isMatchingUp, id} = props;
     const [peer, setPeer] = useState(null);
-
-    const isAlice = (alice === id);
-    let conn = null;
-    const [connected, setConnected] = useState(false);
-
     useEffect(() => {
-        let peer = new Peer('' + id, {
-            host: 'localhost',
-            port: 9000,
-            path: '/peerjs',
-            debug: 3
-        });
-
-        peer.on('open', function (id) {
-            console.log("My ID is " + id);
-        });
-        peer.on('error', function (err) {
-            console.log('' + err)
-        });
-
-        peer.on('connection', function (conn) {
-            console.log("Connection Made.");
-            conn.on('open', function () {
-                console.log("Connection Opened.");
-                conn.on('data', function (data) {
-                    console.log('Received', data);
-                });
-
-                conn.send('Hello from markers-page!');
-            });
-        });
-
-        setPeer(peer);
-    }, []);
-
-    useEffect(() => {
-        if ((isMatchingUp === false) && isAlice) {
-            console.log(peer);
-            sleep(2500).then(() => {
-                conn = peer.connect(bob);
-                conn.on('open', function () {
-                    conn.on('data', function (data) {
-                        console.log('Received', data);
-                    });
-
-                    conn.send('Hello from phone!');
-                });
-                console.log("Trying to connect!");
-            });
+        if (!isMatchingUp) {
+            if (alice === id) {
+                const connection = new SenderConnection(id, bob);
+            } else {
+                const connection = new ReceiverConnection(id, alice);
+            }
         }
     }, [isMatchingUp]);
 
-    console.log(alice, bob);
     if (!isMatchingUp) {
         return (
             <Container>

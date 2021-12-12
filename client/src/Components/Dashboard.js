@@ -34,6 +34,7 @@ function Dashboard(props) {
     setIsMatchingUp(true);
     setIsMatchInitiated(true);
     const [alice, bob] = await requestPairing(id);
+    console.log('Finished finding opponent:', alice, bob);
     setAlice(alice);
     setBob(bob);
     sleep(750);

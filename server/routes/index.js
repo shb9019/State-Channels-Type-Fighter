@@ -1,3 +1,4 @@
+const _ = require('lodash');
 var express = require('express');
 var router = express.Router();
 
@@ -5,29 +6,27 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-const idleNodes =  [];
+const matches =  [];
 
 router.get('/:id', async (req, res) => {
-  let index;
-  for(index = 0; index < idleNodes.length; index++) {
-    if (idleNodes[index].bob == null) {
-      idleNodes[index].bob = req.params.id;
-      break;
-    }
-  }
+  console.log('Matches:', matches);
+  let availableMatchIndex = _.findIndex(matches, match => match.bob == null);
 
-  if (index === idleNodes.length) {
-    idleNodes.push({
+  if (availableMatchIndex === -1) {
+    matches.push({
       alice: req.params.id,
       bob: null
     });
+    availableMatchIndex = matches.length - 1;
 
-    while(idleNodes[index].bob == null) {
+    while(matches[availableMatchIndex].bob == null) {
       await sleep(500);
     }
+  } else {
+    matches[availableMatchIndex].bob = req.params.id;
   }
 
-  return res.send(idleNodes[index]);
+  return res.send(matches[availableMatchIndex]);
 });
 
 module.exports = router;
