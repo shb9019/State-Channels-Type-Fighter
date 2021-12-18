@@ -8,12 +8,11 @@ const socketServerUrl = "ws://localhost:3001";
  */
 export default class SenderConnection {
     constructor(senderId, receiverId) {
-        console.log('Setting up sender connection...');
         this.senderId = senderId;
         this.receiverId = receiverId;
         this.rtcConnection = this.createRtcConnection(webRtcConfig);
         this.dataChannel = this.createDataChannel(this.rtcConnection, "moves");
-
+        this.isReady = false;
         this.postSetup();
     }
 
@@ -42,7 +41,7 @@ export default class SenderConnection {
     createDataChannel(rtcConnection, channelLabel) {
         const dataChannel = rtcConnection.createDataChannel(channelLabel);
         dataChannel.onopen = () => {
-            dataChannel.send("Hello from the other side");
+            this.isReady = true;
         };
         dataChannel.onerror = (error) => console.error("Data channel error:", error);
         return dataChannel;
@@ -123,5 +122,19 @@ export default class SenderConnection {
      */
     setRemoteDescription(answer) {
         this.rtcConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    }
+
+    async sendMessage(message) {
+        let retries = 5;
+        while(this.isReady != true && retries > 0) {
+            retries--;
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        if (retries == 0) {
+            throw new Error("Sender connection failed to connect to receiver");
+        }
+
+        this.dataChannel.send(message);
     }
 }

@@ -2,17 +2,21 @@ import React, {useState, useEffect} from 'react';
 import {Container, Row} from "react-bootstrap";
 import Flight from "./Flight";
 import SenderConnection from '../webrtc/SenderConnection';
-import ReceiverConnection from '../webrtc/ReceiverConnection';
+import ReceiverConnection, { ON_MESSAGE_EVENT_NAME } from '../webrtc/ReceiverConnection';
 
 function Race(props) {
     const {alice, bob, isMatchingUp, id} = props;
-    const [peer, setPeer] = useState(null);
     useEffect(() => {
         if (!isMatchingUp) {
+            console.log("Setting up connection at", new Date());
             if (alice === id) {
                 const connection = new SenderConnection(id, bob);
+                connection.sendMessage("Hello from Race component!");
             } else {
                 const connection = new ReceiverConnection(id, alice);
+                connection.listener.addEventListener(ON_MESSAGE_EVENT_NAME, ({detail: message}) => {
+                    console.log('Message received in component:', message, new Date());
+                });
             }
         }
     }, [isMatchingUp]);

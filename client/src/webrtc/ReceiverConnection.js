@@ -2,17 +2,19 @@ import { io } from "socket.io-client";
 
 const webRtcConfig = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]};
 const socketServerUrl = "ws://localhost:3001";
+export const ON_MESSAGE_EVENT_NAME = "onMessage";
 
 /**
  * WebRTC connection to receive messages from a sender.
  */
 export default class ReceiverConnection {
     constructor(receiverId, senderId) {
-        console.log('Setting up receiver connection...');
         this.receiverId = receiverId;
         this.senderId = senderId;
         this.rtcConnection = this.createRtcConnection(webRtcConfig);
+        this.isReady = false;
         this.postSetup();
+        this.listener = document.createTextNode(null);
     }
 
     /**
@@ -33,7 +35,10 @@ export default class ReceiverConnection {
     setDataChannel(channel) {
         this.dataChannel = channel;
         this.dataChannel.onerror = (error) => console.error('Data channel error:', error);
-        this.dataChannel.onmessage = (event) => console.log(event.data);
+        this.dataChannel.onmessage = (event) => this.receiveMessage(event.data);
+        this.dataChannel.onopen = () => {
+            this.isReady = true;
+        };
     }
 
     /**
@@ -102,4 +107,8 @@ export default class ReceiverConnection {
         this.rtcConnection.addIceCandidate(new RTCIceCandidate(candidate))
             .catch(err => {console.error('Error adding ICE candidate:', err)});
     };
+
+    receiveMessage(message) {
+        this.listener.dispatchEvent(new CustomEvent(ON_MESSAGE_EVENT_NAME, {detail: message}));
+    }
 }
