@@ -12,6 +12,7 @@ io.on("connection", (socket) => {
 
     socket.on("register", (id) => {
         users[id] = socket.id;
+        socket.emit("registered");
     });
 });
 
