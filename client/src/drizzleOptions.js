@@ -1,4 +1,3 @@
-import Web3 from "web3";
 import Adjudicator from "./contracts/Adjudicator.json";
 
 const options = {

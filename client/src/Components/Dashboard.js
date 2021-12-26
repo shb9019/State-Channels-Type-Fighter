@@ -3,7 +3,7 @@ import '../App.css';
 import {Button, Row} from 'react-bootstrap';
 import Race from "./Race";
 
-const getId = () => {
+const generateId = () => {
   return Math.floor((Math.random() * 65535) + 1);
 }
 
@@ -20,14 +20,29 @@ const requestPairing = async (id) => {
 function Dashboard(props) {
   const {drizzle, drizzleState} = props;
   const [id, setId] = useState(0);
+  const [publicAddress, setPublicAddress] = useState('');
   const [alice, setAlice] = useState(0);
   const [bob, setBob] = useState(0);
   const [isMatchInitiated, setIsMatchInitiated] = useState(false);
   const [isMatchingUp, setIsMatchingUp] = useState(false);
 
+  const signTest = async () => {
+    const message = "Test encryption message";
+    const hashedMessage = await drizzle.web3.utils.sha3(message);
+    const accounts = await drizzle.web3.eth.getAccounts();
+    try {
+      await drizzle.web3.eth.personal.unlockAccount(accounts[0], "password", 600);
+    } catch (error) {
+      console.error("Error unlocking account...");
+    }
+    // const signature = await drizzle.web3.eth.sign(hashedMessage, accounts[0]);
+    // console.log('Signature:', signature);
+  };
+
   useEffect(() => {
-    const id = getId();
-    setId(id);
+    setId(generateId());
+    setPublicAddress(drizzleState.accounts[0]);
+    signTest();
    }, []);
 
   const initiateMatch = async () => {
